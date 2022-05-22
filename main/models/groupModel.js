@@ -21,9 +21,17 @@ const groupSchema = mongoose.Schema(
       type: String,
       required: [true, "Please add a group tag"],
     },
-    members: {
-      type: [userSchema],
-    },
+    members: [
+      {
+        memberID: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        memberName: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
