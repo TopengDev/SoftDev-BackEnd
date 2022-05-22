@@ -113,7 +113,7 @@ const setGroup = asyncHandler(async (req, res) => {
 
 //Modify a group
 const updateGroup = asyncHandler(async (req, res) => {
-  const group = await Group.findOne(req.params.id);
+  const group = await Group.findById(req.params.id);
 
   if (!group) {
     res.status(400);
@@ -197,7 +197,7 @@ const addMember = asyncHandler(async (req, res) => {
   });
   group.members.push(addedUser);
   group.save();
-  res.status(200).json(group);
+  res.status(201).json(group);
 });
 
 //Delete a member
