@@ -3,6 +3,8 @@ const asyncHandler = require("express-async-handler");
 const Group = require("../models/groupModel"); // Imported 'Goal' model
 const User = require("../models/userModel"); // Imported 'User' model
 
+const { defaultGroupConfig } = "./configs/defaultGroupConfig";
+
 //Get specific group (by group ID)
 const getGroup = asyncHandler(async (req, res) => {
   const group = await Group.findById(req.params.id);
@@ -17,12 +19,12 @@ const getGroup = asyncHandler(async (req, res) => {
   let userExists = false;
 
   group.members.map((member) => {
-    if (member.memberID.toString() == user._id) {
+    if (member.userID.toString() == user._id) {
       userExists = true;
     }
   });
 
-  if (group.founder.toString() == user._id || userExists) {
+  if (group.groupFounder.toString() == user._id || userExists) {
     res.status(200).json(group);
   } else {
     res.status(401);
@@ -40,14 +42,14 @@ const getGroups = asyncHandler(async (req, res) => {
 
   groups.map((group) => {
     group.members.map((member) => {
-      if (member.memberID.toString() == user._id) {
+      if (member.userID.toString() == user._id) {
         userExists = true;
       }
     });
   });
 
   groups.map((group) => {
-    if (group.founder.toString() == user._id || userExists) {
+    if (group.groupFounder.toString() == user._id || userExists) {
       myGroups.push(group);
     }
   });
@@ -60,7 +62,7 @@ const getOwnedGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({});
   const ownedGroups = [];
   groups.map((group) => {
-    if (group.founder == req.user.id) {
+    if (group.groupFounder == req.user.id) {
       ownedGroups.push(group);
     }
   });
@@ -73,7 +75,7 @@ const getJoinedGroups = asyncHandler(async (req, res) => {
   const joinedGroups = [];
   groups.map((group) => {
     group.members.map((member) => {
-      if (member.memberID == req.user.id) {
+      if (member.userID == req.user.id) {
         joinedGroups.push(group);
       }
     });
@@ -85,25 +87,46 @@ const getJoinedGroups = asyncHandler(async (req, res) => {
 const setGroup = asyncHandler(async (req, res) => {
   if (!req.body.title) {
     res.status(400);
-    throw new Error("Please add a title field");
+    throw new Error("Please add a title field, and specify a title value");
   }
   if (!req.body.description) {
     res.status(400);
-    throw new Error("Please add description field");
+    throw new Error(
+      "Please add description field, and specify a description value"
+    );
   }
   if (!req.body.tag) {
     res.status(400);
-    throw new Error("Please add a tag field");
+    throw new Error("Please add a tag field, and specify a tag value");
+  }
+
+  let settings = {};
+
+  if (req.body.public) {
+    if (req.body.public == ("yes" || "true")) {
+      settings = {
+        isOpenToPublic: true,
+      };
+    }
+  } else {
+    settings = {
+      isOpenToPublic: false,
+    };
   }
 
   const group = await Group.create({
-    founder: req.user.id,
+    groupFounder: req.user.id,
     title: req.body.title,
     description: req.body.description,
     tag: req.body.tag,
+    settings: settings,
   });
 
-  const user = { memberID: req.user.id, memberName: req.user.name };
+  const user = {
+    userID: req.user.id,
+    name: req.user.name,
+    role: "Owner",
+  };
 
   group.members.push(user);
   group.save();
@@ -127,7 +150,7 @@ const updateGroup = asyncHandler(async (req, res) => {
     throw new Error("Founder not found");
   }
 
-  if (group.founder.toString() !== founder.id) {
+  if (group.groupFounder.toString() !== founder.id) {
     res.status(401);
     throw new Error("Founder not authorized");
   }
@@ -155,7 +178,7 @@ const deleteGroup = asyncHandler(async (req, res) => {
     throw new Error("Founder not found");
   }
 
-  if (group.founder.toString() !== founder.id) {
+  if (group.groupFounder.toString() !== founder.id) {
     res.status(401);
     throw new Error("Founder not authorized");
   }
@@ -176,13 +199,13 @@ const addMember = asyncHandler(async (req, res) => {
 
   const user = await User.findById(req.user.id);
 
-  if (group.founder.toString() !== user.id) {
+  if (group.groupFounder.toString() !== user.id) {
     res.status(401);
     throw new Error("Founder not authorized");
   }
 
   const { _id, name, email } = await User.findById(req.body.userID);
-  const addedUser = { memberID: _id, memberName: name };
+  const addedUser = { userID: _id, name: name, role: "Member" };
 
   if (!addedUser) {
     res.status(401);
@@ -190,7 +213,7 @@ const addMember = asyncHandler(async (req, res) => {
   }
 
   const userExists = group.members.map((member) => {
-    if (member.memberID.toString() == _id) {
+    if (member.userID.toString() == _id) {
       res.status(401);
       throw new Error("Member already exists");
     }
@@ -211,7 +234,7 @@ const deleteMember = asyncHandler(async (req, res) => {
 
   const user = await User.findById(req.user.id);
 
-  if (group.founder.toString() !== user.id) {
+  if (group.groupFounder.toString() !== user.id) {
     res.status(401);
     throw new Error("Founder not authorized");
   }
@@ -223,16 +246,106 @@ const deleteMember = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  if (removedUser._id.toString() == group.founder.toString()) {
+  if (removedUser._id.toString() == group.groupFounder.toString()) {
     res.status(401);
-    throw new Error("You can not remove yourself from the group");
+    throw new Error("You can not remove the owner of this group");
   }
 
-  group.members = group.members.filter(
-    (member) => member.memberID != removedUser._id.toString()
-  );
+  const removeUser = () => {
+    group.members = group.members.filter((member) => {
+      return member.userID.toString() != removedUser._id.toString();
+      console.log(group);
+    });
+  };
 
+  let called = 0;
+
+  group.members.map((member) => {
+    if (member.userID.toString() == removedUser._id.toString()) {
+      removeUser();
+      called += 1;
+    }
+  });
+
+  if (called > 0) {
+    group.save();
+    res.status(200).json(group);
+  } else {
+    res.status(400);
+    throw new Error("User is not in the group");
+  }
+});
+
+//Join a group
+const joinGroup = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select("-password");
+  const group = await Group.findById(req.params.id);
+
+  if (!group) {
+    res.status(400);
+    throw new Error("Group not found");
+  }
+
+  if (group.settings.isOpenToPublic != true) {
+    res.status(400);
+    throw new Error("Can not join Private Group");
+  }
+
+  let userExists = false;
+
+  group.members.map((member) => {
+    if (member.userID.toString() == user._id.toString()) {
+      userExists = true;
+    }
+  });
+
+  if (userExists) {
+    res.status(400);
+    throw new Error("You already joined this group");
+  }
+
+  const { _id, name } = user;
+  const joiningUser = { userID: _id, name: name, role: "Member" };
+
+  group.members.push(joiningUser);
   group.save();
+
+  res.status(200).json(group);
+});
+
+//Leave a group
+const leaveGroup = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id);
+  const user = await User.findById(req.user.id).select("-password");
+
+  if (!group) {
+    res.status(400);
+    throw new Error("Group not found");
+  }
+
+  if (group.groupFounder.toString() == user._id.toString()) {
+    res.status(400);
+    throw new Error("Group founder can not leave");
+  }
+
+  let userExists = false;
+
+  group.members.map((member) => {
+    if (member.userID.toString() == user._id.toString()) {
+      userExists = true;
+    }
+  });
+
+  if (userExists) {
+    group.members = group.members.filter((member) => {
+      return member.userID.toString() != user._id.toString();
+    });
+    group.save();
+  } else {
+    res.status(400);
+    throw new Error("You are not in this group");
+  }
+
   res.status(200).json(group);
 });
 
@@ -246,4 +359,6 @@ module.exports = {
   deleteGroup,
   addMember,
   deleteMember,
+  joinGroup,
+  leaveGroup,
 };

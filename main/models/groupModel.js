@@ -4,7 +4,7 @@ const { userSchema } = require("./userModel");
 const groupSchema = mongoose.Schema(
   // Create the 'Goal' model schema
   {
-    founder: {
+    groupFounder: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: "User",
@@ -23,18 +23,23 @@ const groupSchema = mongoose.Schema(
     },
     members: [
       {
-        memberID: {
+        role: { type: String, required: true },
+        userID: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
-        memberName: {
+        name: {
           type: String,
         },
       },
     ],
+    settings: {
+      isOpenToPublic: { type: Boolean, required: true },
+    },
   },
   {
     timestamps: true,
+    strict: false,
   }
 );
 

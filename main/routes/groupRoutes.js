@@ -11,6 +11,8 @@ const {
   deleteGroup,
   addMember,
   deleteMember,
+  joinGroup,
+  leaveGroup,
 } = require("../controllers/groupController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -25,5 +27,7 @@ router
   .delete(protect, deleteGroup)
   .post(protect, addMember);
 router.route("/:id/members").post(protect, deleteMember);
+router.route("/:id/join").post(protect, joinGroup);
+router.route("/:id/leave").post(protect, leaveGroup);
 
 module.exports = router;
