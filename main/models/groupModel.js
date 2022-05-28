@@ -33,6 +33,69 @@ const groupSchema = mongoose.Schema(
         },
       },
     ],
+    tasks: [
+      {
+        taskID: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Task",
+        },
+        taskName: {
+          type: String,
+          required: [true, "Please add a name field"],
+        },
+        taskDescription: {
+          type: String,
+          required: [true, "Please add a description field"],
+        },
+        taskDueDate: {
+          type: String,
+          required: [true, "Please add a date field"],
+        },
+        createdBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+        assignedTo: {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+        taskStatus: {
+          type: String,
+          required: true,
+        },
+        priorityLevel: {
+          type: Number,
+        },
+      },
+    ],
+    finishedTasks: [
+      {
+        taskID: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Task",
+        },
+        taskName: {
+          type: String,
+        },
+        taskDescription: {
+          type: String,
+        },
+        taskDueDate: {
+          type: String,
+        },
+        createdBy: {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+        assignedTo: {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+        taskStatus: {
+          type: String,
+        },
+        priorityLevel: {
+          type: Number,
+        },
+      },
+    ],
     settings: {
       isOpenToPublic: { type: Boolean, required: true },
     },

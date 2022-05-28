@@ -4,6 +4,7 @@ const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
 
 const registerUser = asyncHandler(async (req, res) => {
+  console.log(req.body);
   const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
@@ -48,7 +49,7 @@ const loginUser = asyncHandler(async (req, res) => {
       _id: user.id,
       name: user.name,
       email: user.email,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.name),
     });
   } else {
     res.status(400);
@@ -61,8 +62,8 @@ const profile = asyncHandler(async (req, res) => {
   res.status(200).json({ id: _id, name, email });
 });
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+const generateToken = (id, name) => {
+  return jwt.sign({ id, name }, process.env.JWT_SECRET, { expiresIn: "1h" });
 };
 
 module.exports = { registerUser, loginUser, profile };

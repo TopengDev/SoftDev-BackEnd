@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   getGroup,
   getGroups,
+  getGroupFounder,
   getOwnedGroups,
   getJoinedGroups,
   setGroup,
@@ -14,6 +15,14 @@ const {
   joinGroup,
   leaveGroup,
 } = require("../controllers/groupController");
+
+const {
+  createTask,
+  deleteTask,
+  getTask,
+  getGroupTasks,
+  finishTask,
+} = require("../controllers/taskController");
 
 const { protect } = require("../middleware/authMiddleware");
 
@@ -29,5 +38,16 @@ router
 router.route("/:id/members").post(protect, deleteMember);
 router.route("/:id/join").post(protect, joinGroup);
 router.route("/:id/leave").post(protect, leaveGroup);
+router
+  .route("/:id/tasks")
+  .post(protect, createTask)
+  .get(protect, getGroupTasks);
+router
+  .route("/:id/tasks/:taskId")
+  .delete(protect, deleteTask)
+  .get(protect, getTask);
+router.route("/:id/tasks/:taskId/finish").post(protect, finishTask);
+router.route("/:id/founder").get(protect, getGroupFounder);
+// console.log(createTask);
 
 module.exports = router;

@@ -32,28 +32,54 @@ const getGroup = asyncHandler(async (req, res) => {
   }
 });
 
+//Get group founder name
+const getGroupFounder = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id);
+
+  if (!group) {
+    res.status(400);
+    throw new Error("Group not found");
+  }
+
+  const user = await User.findById(req.user.id).select("-password");
+
+  let userExists = false;
+
+  group.members.map((member) => {
+    if (member.userID.toString() == user._id) {
+      userExists = true;
+    }
+  });
+
+  if (group.groupFounder.toString() == user._id || userExists) {
+    const groupFounder = await User.findById(group.groupFounder);
+    const groupFounderName = await groupFounder.name;
+    console.log(groupFounderName);
+    res.status(200).json(groupFounderName);
+  } else {
+    res.status(401);
+    throw new Error("You have no access to this group");
+  }
+});
+
 //Get all groups (joined or owned)
 const getGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find();
   const user = await User.findById(req.user.id).select("-password");
   const myGroups = [];
+  const sendingGroups = [];
 
-  let userExists = false;
+  myGroups.splice(0, myGroups.length - 1);
 
   groups.map((group) => {
     group.members.map((member) => {
       if (member.userID.toString() == user._id) {
-        userExists = true;
+        myGroups.push(group);
       }
     });
   });
 
-  groups.map((group) => {
-    if (group.groupFounder.toString() == user._id || userExists) {
-      myGroups.push(group);
-    }
-  });
-
+  console.log(myGroups);
   res.status(200).json(myGroups);
 });
 
@@ -102,8 +128,8 @@ const setGroup = asyncHandler(async (req, res) => {
 
   let settings = {};
 
-  if (req.body.public) {
-    if (req.body.public == ("yes" || "true")) {
+  if (req.body.isPublic) {
+    if (req.body.isPublic == ("yes" || "true")) {
       settings = {
         isOpenToPublic: true,
       };
@@ -352,6 +378,7 @@ const leaveGroup = asyncHandler(async (req, res) => {
 module.exports = {
   getGroup,
   getGroups,
+  getGroupFounder,
   getOwnedGroups,
   getJoinedGroups,
   setGroup,
